@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nurse Station - Floor & Patient Management Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="app-header">
+        <div class="logo-area">
+            <span class="icon">🏥</span>
+            <div>
+                <h1>Nurse Station Portal</h1>
+                <p class="subtitle">SQLite Integrated Patient & Floor Management System</p>
+            </div>
+        </div>
+        <button class="btn btn-success" onclick="openAddModal()">+ Register New Patient</button>
+    </header>
+
+    <main class="dashboard-container">
+        <!-- Floor Filter Toolbar -->
+        <section class="controls-panel">
+            <div class="filter-group">
+                <label for="floorSelect">Filter Floor Unit:</label>
+                <select id="floorSelect" onchange="filterFloor()">
+                    <option value="all">All Hospital Floors</option>
+                    <option value="1">First Floor (Floor 1)</option>
+                    <option value="2">Second Floor (Floor 2)</option>
+                    <option value="3">Third Floor (Floor 3)</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Main Workspace -->
+        <section class="content-grid">
+            <!-- Table Panel -->
+            <div class="card table-card">
+                <h2>Assigned Floor Patients</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Room</th>
+                                <th>Patient Name</th>
+                                <th>Floor</th>
+                                <th>Condition</th>
+                                <th>Doctor</th>
+                                <th>Est. Discharge</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientTableBody">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Detail & Action Panel -->
+            <div class="card detail-card" id="detailCard">
+                <div class="empty-state" id="emptyState">
+                    <p>👈 Select a patient record from the list to view clinical details, edit information, or export records.</p>
+                </div>
+                <div class="detail-content hidden" id="detailContent">
+                    <div class="detail-header">
+                        <div>
+                            <h2 id="patientName">---</h2>
+                            <p class="sub-text" id="patientDoctor">---</p>
+                        </div>
+                        <span class="badge" id="patientCode">---</span>
+                    </div>
+                    
+                    <div class="discharge-alert">
+                        <span>⏳ Estimated Time Remaining:</span>
+                        <strong id="dischargeStatus">---</strong>
+                    </div>
+
+                    <div class="info-grid">
+                        <div>
+                            <label>Room Number:</label>
+                            <p id="patientRoom">---</p>
+                        </div>
+                        <div>
+                            <label>Floor Unit:</label>
+                            <p id="patientFloor">---</p>
+                        </div>
+                        <div>
+                            <label>Age:</label>
+                            <p id="patientAge">---</p>
+                        </div>
+                        <div>
+                            <label>Admission Date:</label>
+                            <p id="patientAdmitted">---</p>
+                        </div>
+                        <div>
+                            <label>Condition:</label>
+                            <p id="patientCondition">---</p>
+                        </div>
+                        <div>
+                            <label>Target Discharge:</label>
+                            <p id="patientDischargeDate">---</p>
+                        </div>
+                    </div>
+
+                    <div class="notes-block">
+                        <label>Clinical Progress Notes:</label>
+                        <p id="patientNotes">---</p>
+                    </div>
+
+                    <div class="action-footer">
+                        <button class="btn btn-primary" onclick="downloadRecord()">📥 Download Record (.CSV)</button>
+                        <button class="btn btn-secondary" onclick="openEditModal()">✏️ Edit Record</button>
+                        <button class="btn btn-danger" onclick="dischargePatient()">🚪 Discharge Patient</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Adding / Editing Patients -->
+    <div class="modal-overlay hidden" id="patientModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modalTitle">Register New Patient</h3>
+                <button class="close-btn" onclick="closeModal()">✕</button>
+            </div>
+            <form id="patientForm" onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="formPatientId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Full Name *</label>
+                        <input type="text" id="formName" required placeholder="e.g. John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label>Age *</label>
+                        <input type="number" id="formAge" required min="0" max="120" placeholder="45">
+                    </div>
+                    <div class="form-group">
+                        <label>Floor Level *</label>
+                        <select id="formFloor" required>
+                            <option value="1">Floor 1</option>
+                            <option value="2">Floor 2</option>
+                            <option value="3">Floor 3</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Room Number *</label>
+                        <input type="text" id="formRoom" required placeholder="e.g. 102-B">
+                    </div>
+                    <div class="form-group">
+                        <label>Medical Condition *</label>
+                        <input type="text" id="formCondition" required placeholder="e.g. Post-Op Surgery">
+                    </div>
+                    <div class="form-group">
+                        <label>Assigned Doctor *</label>
+                        <input type="text" id="formDoctor" required placeholder="e.g. Dr. Arben Hoxha">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Estimated Stay Duration (Days from Today) *</label>
+                        <input type="number" id="formStayDays" required min="1" max="365" placeholder="2">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Clinical Notes</label>
+                        <textarea id="formNotes" rows="3" placeholder="Enter clinical observations, medication schedules..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="saveBtn">Save Patient</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
